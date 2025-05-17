@@ -1,0 +1,160 @@
+<?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Database connection parameters
+$servername = "localhost"; // Replace with your server name
+$username = "root"; // Replace with your database username
+$password = ""; // Replace with your database password
+$dbname = "registrationdb"; // Replace with your database name
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Function to retrieve data based on user input
+function retrieveData($Source, $Destination, $Bustype, $Capacity, $conn) {
+    // Prepare SQL statement with parameterized query to prevent SQL injection
+    $stmt = $conn->prepare("SELECT * FROM busdetails WHERE Source = ? AND Destination = ? AND Bustype = ? AND Capacity = ?");
+    if (!$stmt) {
+        die("Prepare failed: " . $conn->error);
+    }
+    $stmt->bind_param("ssss", $Source, $Destination, $Bustype, $Capacity); // "ssss" indicates the types of parameters (string in this case)
+
+    // Execute query
+    if (!$stmt->execute()) {
+        die("Execute failed: " . $stmt->error);
+    }
+
+    // Get result set
+    $result = $stmt->get_result();
+
+    // Check if any rows were returned
+    if ($result->num_rows > 0) {
+        // Output data of each row
+        while ($row = $result->fetch_assoc()) {
+            echo "Source: " . $row["Source"] . " - Destination: " . $row["Destination"] . " - Bustype: " . $row["Bustype"] . " - Capacity: " . $row["Capacity"] . "<br>";
+        }
+    } else {
+        echo "No records found for the given input.";
+    }
+
+    // Close statement
+    $stmt->close();
+}
+
+// Function to retrieve all bus data
+function retrieveAllData($conn) {
+    $sql = "SELECT * FROM busdetails";
+    $result = $conn->query($sql);
+
+    if ($result->num_rows > 0) {
+        // Output data of each row
+        while ($row = $result->fetch_assoc()) {
+            echo "Source: " . $row["Source"] . " - Destination: " . $row["Destination"] . " - Bustype: " . $row["Bustype"] . " - Capacity: " . $row["Capacity"] . "<br>";
+        }
+    } else {
+        echo "No records found.";
+    }
+}
+
+// Check if form was submitted
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $Source = $_POST["Source"];
+    $Destination = $_POST["Destination"];
+    $Bustype = $_POST["Bustype"];
+    $Capacity = $_POST["Capacity"];
+    retrieveData($Source, $Destination, $Bustype, $Capacity, $conn);
+} else {
+    // By default, display all buses
+    retrieveAllData($conn);
+}
+
+// Close database connection
+$conn->close();
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Buses</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Search Buses</h2>
+        <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <label for="Source">Source</label>
+            <input type="text" id="Source" name="Source" required>
+   
+            <label for="Destination">Destination</label>
+            <input type="text" id="Destination" name="Destination" required>
+
+            <label for="Bustype">Bustype</label>
+            <input type="text" id="Bustype" name="Bustype" required>
+           
+            <label for="Capacity">Capacity</label>
+            <input type="number" id="Capacity" name="Capacity" min="1" required><br><br>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <div class="container">
+        <h2>All Buses</h2>
+        <?php
+        // Display all buses when the page loads
+        if ($_SERVER["REQUEST_METHOD"] != "POST") {
+            retrieveAllData($conn);
+        }
+        ?>
+    </div>
+</body>
+</html>
